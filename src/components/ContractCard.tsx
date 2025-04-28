@@ -2,6 +2,7 @@
 import { Tower } from "@/types/tower";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ContractCardProps {
   tower: Tower;
@@ -22,10 +23,10 @@ export const ContractCard = ({ tower }: ContractCardProps) => {
         </div>
 
         <div className="flex flex-col items-center justify-center mb-8">
-          <div className="text-primary">
+          <div className="text-green-600">
             <TrendingUp size={48} />
           </div>
-          <div className="text-2xl font-bold text-info mt-2">
+          <div className="text-2xl font-bold text-green-600 mt-2">
             +{tower.market.cagr.toFixed(2)}%
           </div>
           <div className="text-md text-gray-600">CAGR</div>
@@ -35,9 +36,9 @@ export const ContractCard = ({ tower }: ContractCardProps) => {
           <div className="text-lg font-semibold mb-2">
             Lucratividade ao<br/>término do contrato
           </div>
-          <div className="text-xl font-bold text-info">
+          <Badge className="text-lg bg-green-100 text-green-800 hover:bg-green-200">
             {tower.contract.expiryLucrativePercentage.toFixed(2)}%
-          </div>
+          </Badge>
         </div>
       </CardContent>
     </Card>

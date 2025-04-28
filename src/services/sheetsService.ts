@@ -1,5 +1,6 @@
 
 import { Tower } from "@/types/tower";
+import { toast } from "sonner"; 
 
 const SHEET_ID = '1o-X32tleEa1GTZ9UinmpJI7pwBRjcvs4vqqkyB3vQIQ';
 const API_KEY = ''; // This should be configured by the user
@@ -7,28 +8,42 @@ const SHEET_NAME = 'torres';
 
 export async function fetchTowers(): Promise<Tower[]> {
   try {
-    // For demo purposes, we'll use a proxy or the direct API
-    // In production, this should be done server-side to protect API keys
-    const response = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
-    );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch data from Google Sheets');
+    // Only attempt to fetch if API key is provided
+    if (API_KEY) {
+      const response = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch data from Google Sheets');
+      }
+      
+      const data = await response.json();
+      const parsedTowers = parseTowersData(data.values);
+      
+      if (parsedTowers.length > 0) {
+        toast.success('Dados carregados com sucesso do Google Sheets');
+        return parsedTowers;
+      } else {
+        toast.error('Nenhum dado encontrado na planilha');
+      }
+    } else {
+      console.log('No API key provided, using mock data');
     }
-    
-    const data = await response.json();
-    return parseTowersData(data.values);
+
+    // Fallback to mock data when no API key or parsing issues
+    return getMockTowers();
     
   } catch (error) {
     console.error("Error fetching towers data:", error);
+    toast.error(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     return getMockTowers(); // Fallback to mock data
   }
 }
 
 function parseTowersData(rows: string[][]): Tower[] {
   if (!rows || rows.length < 2) {
-    return getMockTowers();
+    return [];
   }
   
   const headers = rows[0];
@@ -39,56 +54,77 @@ function parseTowersData(rows: string[][]): Tower[] {
     const row = rows[i];
     if (row.length < 3) continue; // Skip empty rows
     
-    // Map your spreadsheet columns to the Tower interface
-    // This mapping needs to be adjusted based on your actual spreadsheet structure
+    // Get column indices from headers for easier mapping
+    const getColumnIndex = (name: string) => {
+      const index = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+      return index >= 0 ? index : null;
+    };
+
+    const nameIndex = getColumnIndex('nome') || 0;
+    const locationIndex = getColumnIndex('localizacao') || 1;
+    const latIndex = getColumnIndex('latitude') || 2;
+    const lngIndex = getColumnIndex('longitude') || 3;
+    const totalInvestmentIndex = getColumnIndex('valor_total_investimento') || 4;
+    const landValueIndex = getColumnIndex('valor_terreno') || 5;
+    const structureValueIndex = getColumnIndex('estrutura') || 6;
+    const equipmentValueIndex = getColumnIndex('equipamentos') || 7;
+    const monthlyReturnIndex = getColumnIndex('remuneracao_mensal') || 10;
+    const monthlyReturnPercentIndex = getColumnIndex('rentabilidade_mensal') || 11;
+    const annualReturnIndex = getColumnIndex('remuneracao_anual') || 12;
+    const annualReturnPercentIndex = getColumnIndex('rentabilidade_anual') || 13;
+    const operatorFeeIndex = getColumnIndex('raes_operadora') || 14;
+    const totalContractValueIndex = getColumnIndex('remuneracao_total') || 15;
+    const totalContractPercentIndex = getColumnIndex('rentabilidade_total') || 16;
+    
+    // Create tower object with mapped data
     const tower: Tower = {
       id: `tower-${i}`,
-      name: row[0] || `Torre ${i}`,
-      location: row[1] || 'Localização não especificada',
+      name: row[nameIndex] || `Torre ${i}`,
+      location: row[locationIndex] || 'Localização não especificada',
       coordinates: {
-        lat: parseFloat(row[2]) || -23.5505,
-        lng: parseFloat(row[3]) || -46.6333,
+        lat: parseFloat(row[latIndex]) || -23.5505,
+        lng: parseFloat(row[lngIndex]) || -46.6333,
       },
       investment: {
-        total: parseFloat(row[4]) || 231000,
-        land: parseFloat(row[5]) || 150400,
-        structure: parseFloat(row[6]) || 51000,
-        equipment: parseFloat(row[7]) || 30000,
+        total: parseFloat(row[totalInvestmentIndex]) || 231000,
+        land: parseFloat(row[landValueIndex]) || 150400,
+        structure: parseFloat(row[structureValueIndex]) || 51000,
+        equipment: parseFloat(row[equipmentValueIndex]) || 30000,
         other: parseFloat(row[8]) || 0,
         locationDetails: row[9] || 'Local pronto para implantação',
       },
       returns: {
-        monthly: parseFloat(row[10]) || 3000,
-        annual: (parseFloat(row[10]) || 3000) * 12,
-        operatorFee: parseFloat(row[11]) || 80800,
-        totalContractValue: parseFloat(row[12]) || 1080000,
-        roi: parseFloat(row[13]) || 467.53,
+        monthly: parseFloat(row[monthlyReturnIndex]) || 3000,
+        annual: parseFloat(row[annualReturnIndex]) || 36000,
+        operatorFee: parseFloat(row[operatorFeeIndex]) || 80800,
+        totalContractValue: parseFloat(row[totalContractValueIndex]) || 1080000,
+        roi: parseFloat(row[totalContractPercentIndex]) || 467.53,
       },
       contract: {
-        duration: parseInt(row[14]) || 30,
-        periods: row[15] || '10 + 10 + 10',
-        payback: parseFloat(row[16]) || 77,
-        expiryLucrativePercentage: parseFloat(row[17]) || 80.26,
+        duration: parseInt(row[17]) || 30,
+        periods: row[18] || '10 + 10 + 10',
+        payback: parseFloat(row[19]) || 77,
+        expiryLucrativePercentage: parseFloat(row[20]) || 80.26,
       },
       market: {
-        cagr: parseFloat(row[18]) || 7.84,
-        topMarket: row[19] || 'América do Norte e Ásia Pacífico',
-        growthRegion: row[20] || 'América do Norte e Ásia Pacífico',
-        currentYear: parseInt(row[21]) || 2020,
-        projectedYear: parseInt(row[22]) || 2028,
-        currentValue: parseFloat(row[23]) || 7.1,
-        projectedValue: parseFloat(row[24]) || 12.5,
+        cagr: parseFloat(row[21]) || 7.84,
+        topMarket: row[22] || 'América do Norte e Ásia Pacífico',
+        growthRegion: row[23] || 'América do Norte e Ásia Pacífico',
+        currentYear: parseInt(row[24]) || 2020,
+        projectedYear: parseInt(row[25]) || 2028,
+        currentValue: parseFloat(row[26]) || 7.1,
+        projectedValue: parseFloat(row[27]) || 12.5,
       },
       images: {
-        location: row[25] || 'https://via.placeholder.com/300x200?text=Local+da+Torre',
-        tower: row[26] || 'https://via.placeholder.com/300x200?text=Torre',
+        location: row[28] || 'https://via.placeholder.com/300x200?text=Local+da+Torre',
+        tower: row[29] || 'https://via.placeholder.com/300x200?text=Torre',
       },
     };
     
     towers.push(tower);
   }
   
-  return towers.length > 0 ? towers : getMockTowers();
+  return towers.length > 0 ? towers : [];
 }
 
 // Mock data for demo purposes or when API is not available
@@ -187,3 +223,36 @@ export async function fetchTowerById(id: string): Promise<Tower | undefined> {
   const towers = await fetchTowers();
   return towers.find(tower => tower.id === id);
 }
+
+/*
+  COMO CONECTAR SUA PLANILHA DO GOOGLE SHEETS:
+  
+  1. Acesse https://console.cloud.google.com/
+  2. Crie um novo projeto ou use um existente
+  3. Habilite a API Google Sheets para esse projeto
+  4. Crie uma chave de API em Credenciais
+  5. Copie a chave API gerada e substitua a constante API_KEY acima
+  6. Certifique-se que sua planilha está pública para leitura
+  7. Mantenha a mesma estrutura de cabeçalhos na planilha para compatibilidade com o mapeamento
+  
+  CABEÇALHOS NECESSÁRIOS NA PLANILHA:
+  - nome
+  - localizacao
+  - latitude
+  - longitude
+  - valor_total_investimento
+  - valor_terreno
+  - estrutura
+  - equipamentos
+  - remuneracao_mensal
+  - rentabilidade_mensal
+  - remuneracao_anual
+  - rentabilidade_anual
+  - raes_operadora
+  - remuneracao_total
+  - rentabilidade_total
+  ...
+  
+  Obs: O sistema tentará localizar esses cabeçalhos independentemente de capitalização
+  ou nomes parciais, mas é recomendado manter os nomes exatos para melhor compatibilidade.
+*/
