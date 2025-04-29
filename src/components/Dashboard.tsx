@@ -11,13 +11,10 @@ import { LocationCard } from "./LocationCard";
 import { Footer } from "./Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTowers } from "@/services/sheetsService";
-import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
 
 export const Dashboard = () => {
   const [selectedTower, setSelectedTower] = useState<Tower | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showApiInfo, setShowApiInfo] = useState(false);
 
   useEffect(() => {
     async function loadInitialTower() {
@@ -55,29 +52,6 @@ export const Dashboard = () => {
           <CardContent>
             <p className="mb-4">Selecione uma torre para visualizar os detalhes do investimento:</p>
             <TowerSelector onSelect={setSelectedTower} />
-            <div className="mt-6">
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                onClick={() => setShowApiInfo(!showApiInfo)}
-              >
-                <Settings size={16} className="mr-2" /> 
-                Configurar Google Sheets
-              </Button>
-              
-              {showApiInfo && (
-                <div className="mt-4 p-4 bg-slate-50 rounded-md text-sm">
-                  <h4 className="font-semibold mb-2">Como conectar sua planilha:</h4>
-                  <ol className="list-decimal pl-4 space-y-2">
-                    <li>Acesse o <a href="https://console.cloud.google.com/" className="text-primary underline" target="_blank" rel="noopener noreferrer">Google Cloud Console</a></li>
-                    <li>Crie um projeto e habilite a API Google Sheets</li>
-                    <li>Crie uma chave de API em Credenciais</li>
-                    <li>Copie a chave para o arquivo sheetsService.ts</li>
-                    <li>Certifique-se que sua planilha esteja pública para leitura</li>
-                  </ol>
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -93,32 +67,8 @@ export const Dashboard = () => {
           <h2 className="text-2xl font-bold">RESUMO DA OPORTUNIDADE</h2>
           <div className="flex items-center gap-2">
             <TowerSelector onSelect={setSelectedTower} />
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setShowApiInfo(!showApiInfo)}
-              title="Configurar Google Sheets"
-            >
-              <Settings size={16} />
-            </Button>
           </div>
         </div>
-
-        {showApiInfo && (
-          <Card className="mb-6 border-primary">
-            <CardContent className="pt-6">
-              <h3 className="font-semibold mb-2">Como conectar sua planilha do Google Sheets:</h3>
-              <ol className="list-decimal pl-4 space-y-2">
-                <li>Acesse o <a href="https://console.cloud.google.com/" className="text-primary underline" target="_blank" rel="noopener noreferrer">Google Cloud Console</a></li>
-                <li>Crie um projeto e habilite a API Google Sheets</li>
-                <li>Crie uma chave de API em Credenciais</li>
-                <li>Copie a chave para o arquivo sheetsService.ts</li>
-                <li>Certifique-se que sua planilha esteja pública para leitura</li>
-                <li>Use os mesmos cabeçalhos da planilha de exemplo</li>
-              </ol>
-            </CardContent>
-          </Card>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
