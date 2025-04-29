@@ -3,7 +3,7 @@ import { Tower } from "@/types/tower";
 import { toast } from "sonner"; 
 
 const SHEET_ID = '1o-X32tleEa1GTZ9UinmpJI7pwBRjcvs4vqqkyB3vQIQ';
-const API_KEY = ''; // This should be configured by the user
+const API_KEY = ''; // Insira sua chave API do Google aqui
 const SHEET_NAME = 'torres';
 
 export async function fetchTowers(): Promise<Tower[]> {
@@ -256,3 +256,4 @@ export async function fetchTowerById(id: string): Promise<Tower | undefined> {
   Obs: O sistema tentará localizar esses cabeçalhos independentemente de capitalização
   ou nomes parciais, mas é recomendado manter os nomes exatos para melhor compatibilidade.
 */
+
