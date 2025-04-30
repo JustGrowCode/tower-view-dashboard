@@ -63,12 +63,12 @@ export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps)
   return (
     <div className="w-full max-w-xs">
       <Select onValueChange={handleChange} disabled={isLoading}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full bg-[#222a3d] border-[#2e3b52] text-white">
           <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione uma torre"} />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-[#222a3d] border-[#2e3b52] text-white">
           {towers.map((tower) => (
-            <SelectItem key={tower.id} value={tower.id}>
+            <SelectItem key={tower.id} value={tower.id} className="hover:bg-[#2e3b52]">
               {tower.name} - {tower.location}
             </SelectItem>
           ))}
