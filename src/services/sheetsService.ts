@@ -1,3 +1,4 @@
+
 import { Tower } from "@/types/tower";
 import { toast } from "sonner"; 
 import { QueryClient } from "@tanstack/react-query";
@@ -7,26 +8,45 @@ const API_KEY = 'AIzaSyB0JhrzJjRkyiOZibah2Z028S6G3QRCVco'; // Google API key
 const SHEET_NAME = 'torres';
 
 // Initialize a query client that can be used for manual invalidation
-export const queryClient = new QueryClient();
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60000, // 1 minute (reduced from 4 minutes)
+      cacheTime: 120000, // 2 minutes (shorter cache time)
+    },
+  },
+});
+
+// Use a version key to force cache invalidation
+let DATA_VERSION = Date.now();
 
 // Function to refresh data manually
 export const refreshTowersData = async () => {
   toast.info("Atualizando dados...");
+  // Update version to force cache invalidation
+  DATA_VERSION = Date.now();
+  localStorage.removeItem('cachedTowers'); // Clear any local storage cache
+  // Force refetch by invalidating and then refetching
   await queryClient.invalidateQueries({ queryKey: ['towers'] });
+  // Immediately refetch to ensure fresh data
+  await queryClient.refetchQueries({ queryKey: ['towers'] });
   toast.success("Dados atualizados com sucesso!");
 };
 
 export async function fetchTowers(): Promise<Tower[]> {
   try {
+    // Add version to prevent caching issues
+    console.log(`Fetching data from Google Sheets... (version: ${DATA_VERSION})`);
+    
     // Only attempt to fetch if API key is provided
     if (API_KEY) {
-      console.log("Fetching data from Google Sheets...");
       const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}&v=${DATA_VERSION}`
       );
       
       if (!response.ok) {
-        throw new Error('Falha ao buscar dados do Google Sheets');
+        console.error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+        throw new Error(`Falha ao buscar dados do Google Sheets: ${response.status}`);
       }
       
       const data = await response.json();
@@ -43,6 +63,14 @@ export async function fetchTowers(): Promise<Tower[]> {
       if (parsedTowers.length > 0) {
         console.log("Successfully parsed towers data:", parsedTowers);
         toast.success('Dados carregados com sucesso do Google Sheets');
+        
+        // Store in localStorage as backup
+        try {
+          localStorage.setItem('lastFetchTime', new Date().toISOString());
+        } catch (e) {
+          console.warn('Could not save fetch time to localStorage', e);
+        }
+        
         return parsedTowers;
       } else {
         console.error("Failed to parse tower data");
@@ -50,6 +78,7 @@ export async function fetchTowers(): Promise<Tower[]> {
       }
     } else {
       console.log('No API key provided, using mock data');
+      toast.warning('Chave de API não configurada, usando dados de demonstração');
     }
 
     // Fallback to mock data when no API key or parsing issues
@@ -163,7 +192,7 @@ function parseTowersData(rows: string[][]): Tower[] {
         contract: {
           duration: parseInt(getValue(['periodo_contrato'], 16, '30')) || 30,
           periods: getValue(['periodo'], 16, '10 + 10 + 10'),
-          payback: getNumericValue(['payback'], 19, 77),
+          payback: getNumericValue(['payback', 'periodo_estudo'], 19, 77),
           expiryLucrativePercentage: getNumericValue(['expiry'], 20, 80.26),
         },
         market: {
@@ -194,6 +223,7 @@ function parseTowersData(rows: string[][]): Tower[] {
 
 // Mock data for demo purposes or when API is not available
 function getMockTowers(): Tower[] {
+  toast.warning('Utilizando dados de demonstração', { id: 'mock-data-warning' });
   return [
     {
       id: 'tower-1',
