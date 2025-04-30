@@ -1,29 +1,52 @@
+
 import { Tower } from "@/types/tower";
 import { toast } from "sonner"; 
+import { QueryClient } from "@tanstack/react-query";
 
 const SHEET_ID = '1o-X32tleEa1GTZ9UinmpJI7pwBRjcvs4vqqkyB3vQIQ';
 const API_KEY = 'AIzaSyB0JhrzJjRkyiOZibah2Z028S6G3QRCVco'; // Google API key
 const SHEET_NAME = 'torres';
 
+// Initialize a query client that can be used for manual invalidation
+export const queryClient = new QueryClient();
+
+// Function to refresh data manually
+export const refreshTowersData = async () => {
+  toast.info("Atualizando dados...");
+  await queryClient.invalidateQueries({ queryKey: ['towers'] });
+  toast.success("Dados atualizados com sucesso!");
+};
+
 export async function fetchTowers(): Promise<Tower[]> {
   try {
     // Only attempt to fetch if API key is provided
     if (API_KEY) {
+      console.log("Fetching data from Google Sheets...");
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch data from Google Sheets');
+        throw new Error('Falha ao buscar dados do Google Sheets');
       }
       
       const data = await response.json();
+      console.log("Received data from Google Sheets:", data);
+      
+      if (!data.values || data.values.length < 2) {
+        console.error("No data or insufficient data returned from the sheet");
+        toast.error('Dados insuficientes na planilha');
+        return getMockTowers();
+      }
+      
       const parsedTowers = parseTowersData(data.values);
       
       if (parsedTowers.length > 0) {
+        console.log("Successfully parsed towers data:", parsedTowers);
         toast.success('Dados carregados com sucesso do Google Sheets');
         return parsedTowers;
       } else {
+        console.error("Failed to parse tower data");
         toast.error('Nenhum dado encontrado na planilha');
       }
     } else {
@@ -40,89 +63,156 @@ export async function fetchTowers(): Promise<Tower[]> {
   }
 }
 
+// Helper to parse currency strings like "R$ 1.234,56" to number
+function parseCurrency(value: string): number {
+  if (!value) return 0;
+  
+  // Remove currency symbol, dots for thousands, and replace comma with dot for decimal
+  return parseFloat(
+    value.replace(/[R$\s.]/g, '')
+      .replace(',', '.')
+  );
+}
+
 function parseTowersData(rows: string[][]): Tower[] {
   if (!rows || rows.length < 2) {
     return [];
   }
   
   const headers = rows[0];
+  console.log("Sheet headers:", headers);
   const towers: Tower[] = [];
   
   // Skip header row
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    if (row.length < 3) continue; // Skip empty rows
+    if (row.length < 3) {
+      console.warn(`Skipping row ${i} due to insufficient data:`, row);
+      continue; // Skip empty rows
+    }
     
+    // Map headers with more flexibility
     // Get column indices from headers for easier mapping
-    const getColumnIndex = (name: string) => {
-      const index = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
-      return index >= 0 ? index : null;
+    const getColumnIndex = (possibleNames: string[]) => {
+      for (const name of possibleNames) {
+        const index = headers.findIndex(h => 
+          h.toLowerCase().includes(name.toLowerCase())
+        );
+        if (index >= 0) return index;
+      }
+      return null;
     };
 
-    const nameIndex = getColumnIndex('nome') || 0;
-    const locationIndex = getColumnIndex('localizacao') || 1;
-    const latIndex = getColumnIndex('latitude') || 2;
-    const lngIndex = getColumnIndex('longitude') || 3;
-    const totalInvestmentIndex = getColumnIndex('valor_total_investimento') || 4;
-    const landValueIndex = getColumnIndex('valor_terreno') || 5;
-    const structureValueIndex = getColumnIndex('estrutura') || 6;
-    const equipmentValueIndex = getColumnIndex('equipamentos') || 7;
-    const monthlyReturnIndex = getColumnIndex('remuneracao_mensal') || 10;
-    const monthlyReturnPercentIndex = getColumnIndex('rentabilidade_mensal') || 11;
-    const annualReturnIndex = getColumnIndex('remuneracao_anual') || 12;
-    const annualReturnPercentIndex = getColumnIndex('rentabilidade_anual') || 13;
-    const operatorFeeIndex = getColumnIndex('raes_operadora') || 14;
-    const totalContractValueIndex = getColumnIndex('remuneracao_total') || 15;
-    const totalContractPercentIndex = getColumnIndex('rentabilidade_total') || 16;
+    const projectIndex = getColumnIndex(['projeto', 'nome']) || 0;
+    const cityIndex = getColumnIndex(['cidade']) || 1;
+    const stateIndex = getColumnIndex(['estado']) || 2;
+    const latIndex = getColumnIndex(['latitude', 'lat']) || 3;
+    const lngIndex = getColumnIndex(['longitude', 'lng']) || 4;
+    const landValueIndex = getColumnIndex(['valor_terreno', 'terreno']) || 5;
+    const structureValueIndex = getColumnIndex(['estrutura', 'taça']) || 6;
+    const equipmentValueIndex = getColumnIndex(['equipamentos']) || 7;
+    const otherIndex = getColumnIndex(['despesas', 'documentacao']) || 8;
+    const locationDetailsIndex = getColumnIndex(['local', 'localização', 'detalhes']) || 9;
+    const totalInvestmentIndex = getColumnIndex(['valor_total_investimento', 'investimento_total']) || 10;
+    const monthlyReturnIndex = getColumnIndex(['remuneracao_mensal', 'retorno_mensal']) || 11;
+    const monthlyReturnPercentIndex = getColumnIndex(['rentabilidade_mensal']) || 12;
+    const operatorFeeIndex = getColumnIndex(['operadora_adicional', 'raes_operadora']) || 13;
+    const annualReturnIndex = getColumnIndex(['remuneracao_anual', 'retorno_anual']) || 14;
+    const annualReturnPercentIndex = getColumnIndex(['rentabilidade_anual']) || 15;
+    const contractDurationIndex = getColumnIndex(['periodo_contrato', 'contrato']) || 16;
+    const totalContractValueIndex = getColumnIndex(['remuneracao_total', 'contrato_total']) || 17;
+    const totalContractPercentIndex = getColumnIndex(['rentabilidade_total']) || 18;
+    const paybackIndex = getColumnIndex(['payback']) || 19;
+    const expiryLucrativePercentageIndex = getColumnIndex(['expiry']) || 20;
+    const cagrIndex = getColumnIndex(['cagr']) || 21;
+    const topMarketIndex = getColumnIndex(['maior_mercado']) || 22;
+    const growthRegionIndex = getColumnIndex(['mercado_crescimento']) || 23;
+    const currentYearIndex = getColumnIndex(['ano_atual']) || 24;
+    const projectedYearIndex = getColumnIndex(['ano_projetado']) || 25;
+    const currentValueIndex = getColumnIndex(['valor_atual']) || 26;
+    const projectedValueIndex = getColumnIndex(['valor_projetado']) || 27;
+    const mapUrlIndex = getColumnIndex(['maps', 'google_maps']) || 28;
+    const locationImageIndex = getColumnIndex(['imagem_terreno', 'terreno_imagem']) || 29;
+    const towerImageIndex = getColumnIndex(['imagem_torre', 'torre_imagem']) || 30;
     
-    // Create tower object with mapped data
-    const tower: Tower = {
-      id: `tower-${i}`,
-      name: row[nameIndex] || `Torre ${i}`,
-      location: row[locationIndex] || 'Localização não especificada',
-      coordinates: {
-        lat: parseFloat(row[latIndex]) || -23.5505,
-        lng: parseFloat(row[lngIndex]) || -46.6333,
-      },
-      investment: {
-        total: parseFloat(row[totalInvestmentIndex]) || 231000,
-        land: parseFloat(row[landValueIndex]) || 150400,
-        structure: parseFloat(row[structureValueIndex]) || 51000,
-        equipment: parseFloat(row[equipmentValueIndex]) || 30000,
-        other: parseFloat(row[8]) || 0,
-        locationDetails: row[9] || 'Local pronto para implantação',
-      },
-      returns: {
-        monthly: parseFloat(row[monthlyReturnIndex]) || 3000,
-        annual: parseFloat(row[annualReturnIndex]) || 36000,
-        operatorFee: parseFloat(row[operatorFeeIndex]) || 80800,
-        totalContractValue: parseFloat(row[totalContractValueIndex]) || 1080000,
-        roi: parseFloat(row[totalContractPercentIndex]) || 467.53,
-      },
-      contract: {
-        duration: parseInt(row[17]) || 30,
-        periods: row[18] || '10 + 10 + 10',
-        payback: parseFloat(row[19]) || 77,
-        expiryLucrativePercentage: parseFloat(row[20]) || 80.26,
-      },
-      market: {
-        cagr: parseFloat(row[21]) || 7.84,
-        topMarket: row[22] || 'América do Norte e Ásia Pacífico',
-        growthRegion: row[23] || 'América do Norte e Ásia Pacífico',
-        currentYear: parseInt(row[24]) || 2020,
-        projectedYear: parseInt(row[25]) || 2028,
-        currentValue: parseFloat(row[26]) || 7.1,
-        projectedValue: parseFloat(row[27]) || 12.5,
-      },
-      images: {
-        location: row[28] || 'https://via.placeholder.com/300x200?text=Local+da+Torre',
-        tower: row[29] || 'https://via.placeholder.com/300x200?text=Torre',
-      },
+    const getValue = (index: number | null, defaultValue: any = ''): any => {
+      if (index === null || index >= row.length) return defaultValue;
+      return row[index] || defaultValue;
     };
     
-    towers.push(tower);
+    const getNumericValue = (index: number | null, defaultValue: number = 0): number => {
+      if (index === null || index >= row.length) return defaultValue;
+      const value = row[index];
+      if (!value) return defaultValue;
+      
+      if (typeof value === 'number') return value;
+      
+      // Try to parse currency or numeric string
+      try {
+        if (value.includes('R$') || value.includes('.') || value.includes(',')) {
+          return parseCurrency(value);
+        }
+        return parseFloat(value) || defaultValue;
+      } catch (e) {
+        console.warn(`Failed to parse numeric value: ${value}`, e);
+        return defaultValue;
+      }
+    };
+    
+    try {
+      // Create tower object with mapped data
+      const tower: Tower = {
+        id: `tower-${i}`,
+        name: getValue(projectIndex, `Torre ${i}`),
+        location: `${getValue(cityIndex, 'Cidade')} - ${getValue(stateIndex, 'UF')}`,
+        coordinates: {
+          lat: getNumericValue(latIndex, -23.5505),
+          lng: getNumericValue(lngIndex, -46.6333),
+        },
+        investment: {
+          total: getNumericValue(totalInvestmentIndex, 231000),
+          land: getNumericValue(landValueIndex, 150400),
+          structure: getNumericValue(structureValueIndex, 51000),
+          equipment: getNumericValue(equipmentValueIndex, 30000),
+          other: getNumericValue(otherIndex, 0),
+          locationDetails: getValue(locationDetailsIndex, 'Local pronto para implantação'),
+        },
+        returns: {
+          monthly: getNumericValue(monthlyReturnIndex, 3000),
+          annual: getNumericValue(annualReturnIndex, 36000),
+          operatorFee: getNumericValue(operatorFeeIndex, 80800),
+          totalContractValue: getNumericValue(totalContractValueIndex, 1080000),
+          roi: getNumericValue(totalContractPercentIndex, 467.53),
+        },
+        contract: {
+          duration: parseInt(getValue(contractDurationIndex, '30')) || 30,
+          periods: getValue(16, '10 + 10 + 10'),
+          payback: getNumericValue(paybackIndex, 77),
+          expiryLucrativePercentage: getNumericValue(expiryLucrativePercentageIndex, 80.26),
+        },
+        market: {
+          cagr: getNumericValue(cagrIndex, 7.84),
+          topMarket: getValue(topMarketIndex, 'América do Norte e Ásia Pacífico'),
+          growthRegion: getValue(growthRegionIndex, 'América do Norte e Ásia Pacífico'),
+          currentYear: parseInt(getValue(currentYearIndex, '2020')) || 2020,
+          projectedYear: parseInt(getValue(projectedYearIndex, '2028')) || 2028,
+          currentValue: getNumericValue(currentValueIndex, 7.1),
+          projectedValue: getNumericValue(projectedValueIndex, 12.5),
+        },
+        images: {
+          location: getValue(locationImageIndex, '/lovable-uploads/212f763a-68d2-4f3e-86a6-98e55844987b.png'),
+          tower: getValue(towerImageIndex, '/lovable-uploads/212f763a-68d2-4f3e-86a6-98e55844987b.png'),
+        },
+      };
+      
+      towers.push(tower);
+      console.log(`Successfully processed row ${i} into tower:`, tower.name);
+    } catch (error) {
+      console.error(`Error processing row ${i}:`, error, row);
+    }
   }
   
+  console.log(`Parsed ${towers.length} towers from ${rows.length-1} rows`);
   return towers.length > 0 ? towers : [];
 }
 

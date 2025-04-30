@@ -2,13 +2,15 @@
 import { Tower } from "@/types/tower";
 import { TowerSelector } from "./TowerSelector";
 import { formatCurrency } from "@/lib/utils";
+import { RefreshDataButton } from "./RefreshDataButton";
 
 interface DashboardHeaderProps {
   tower: Tower;
   onSelectTower: (tower: Tower) => void;
+  towers: Tower[];
 }
 
-export const DashboardHeader = ({ tower, onSelectTower }: DashboardHeaderProps) => {
+export const DashboardHeader = ({ tower, onSelectTower, towers }: DashboardHeaderProps) => {
   return (
     <div className="bg-[#1a1f2c] w-full py-6 px-8 border-b border-[#2e3b52]">
       <div className="container mx-auto">
@@ -19,7 +21,8 @@ export const DashboardHeader = ({ tower, onSelectTower }: DashboardHeaderProps) 
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <TowerSelector onSelect={onSelectTower} />
+            <TowerSelector onSelect={onSelectTower} availableTowers={towers} />
+            <RefreshDataButton />
           </div>
         </div>
 

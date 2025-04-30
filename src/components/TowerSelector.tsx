@@ -12,13 +12,21 @@ import {
 
 interface TowerSelectorProps {
   onSelect: (tower: Tower) => void;
+  availableTowers?: Tower[]; // Optional pre-loaded towers
 }
 
-export const TowerSelector = ({ onSelect }: TowerSelectorProps) => {
-  const [towers, setTowers] = useState<Tower[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps) => {
+  const [towers, setTowers] = useState<Tower[]>(availableTowers || []);
+  const [isLoading, setIsLoading] = useState(!availableTowers);
 
   useEffect(() => {
+    // If we already have towers provided, use those
+    if (availableTowers && availableTowers.length > 0) {
+      setTowers(availableTowers);
+      setIsLoading(false);
+      return;
+    }
+
     async function loadTowers() {
       try {
         const data = await fetchTowers();
@@ -33,8 +41,17 @@ export const TowerSelector = ({ onSelect }: TowerSelectorProps) => {
       }
     }
 
-    loadTowers();
-  }, [onSelect]);
+    if (isLoading) {
+      loadTowers();
+    }
+  }, [onSelect, availableTowers, isLoading]);
+
+  // Update local state when availableTowers change
+  useEffect(() => {
+    if (availableTowers && availableTowers.length > 0) {
+      setTowers(availableTowers);
+    }
+  }, [availableTowers]);
 
   const handleChange = (value: string) => {
     const selected = towers.find((tower) => tower.id === value);
