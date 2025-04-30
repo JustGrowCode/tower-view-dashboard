@@ -41,4 +41,6 @@ export interface Tower {
     location: string;
     tower: string;
   };
+  // New optional field to track data source
+  source?: 'sheets' | 'mock';
 }

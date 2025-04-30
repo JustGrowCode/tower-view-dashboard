@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
 interface TowerSelectorProps {
   onSelect: (tower: Tower) => void;
@@ -18,24 +19,36 @@ interface TowerSelectorProps {
 export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps) => {
   const [towers, setTowers] = useState<Tower[]>(availableTowers || []);
   const [isLoading, setIsLoading] = useState(!availableTowers);
+  const [isMockData, setIsMockData] = useState(false);
 
   useEffect(() => {
     // If we already have towers provided, use those
     if (availableTowers && availableTowers.length > 0) {
       setTowers(availableTowers);
       setIsLoading(false);
+      // Check if using mock data based on the first tower's id format
+      setIsMockData(availableTowers[0]?.id === 'tower-1' && availableTowers.length <= 2);
       return;
     }
 
     async function loadTowers() {
       try {
+        setIsLoading(true);
+        console.log("TowerSelector: Fetching towers data...");
         const data = await fetchTowers();
+        console.log("TowerSelector: Received towers data:", data);
+        
         setTowers(data);
+        
+        // Detect if we're using mock data based on specific pattern
+        setIsMockData(data[0]?.id === 'tower-1' && data.length <= 2);
+        
         if (data.length > 0) {
           onSelect(data[0]);
         }
       } catch (error) {
         console.error("Failed to load towers:", error);
+        setIsMockData(true);
       } finally {
         setIsLoading(false);
       }
@@ -50,6 +63,8 @@ export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps)
   useEffect(() => {
     if (availableTowers && availableTowers.length > 0) {
       setTowers(availableTowers);
+      // Check if using mock data
+      setIsMockData(availableTowers[0]?.id === 'tower-1' && availableTowers.length <= 2);
     }
   }, [availableTowers]);
 
@@ -64,9 +79,27 @@ export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps)
     <div className="w-full max-w-xs">
       <Select onValueChange={handleChange} disabled={isLoading}>
         <SelectTrigger className="w-full bg-[#222a3d] border-[#2e3b52] text-white">
-          <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione uma torre"} />
+          {isLoading ? (
+            <div className="flex items-center">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span>Carregando torres...</span>
+            </div>
+          ) : (
+            <div className="flex items-center">
+              <SelectValue placeholder="Selecione uma torre" />
+              {isMockData && (
+                <span className="ml-2 text-xs text-amber-400">(Demo)</span>
+              )}
+            </div>
+          )}
         </SelectTrigger>
         <SelectContent className="bg-[#222a3d] border-[#2e3b52]">
+          {isMockData && (
+            <div className="px-2 py-1 text-xs text-amber-400 border-b border-[#2e3b52]">
+              Usando dados de demonstração
+            </div>
+          )}
+          
           {towers.map((tower) => (
             <SelectItem 
               key={tower.id} 

@@ -38,17 +38,48 @@ export async function fetchTowers(): Promise<Tower[]> {
     // Add version to prevent caching issues
     console.log(`Fetching data from Google Sheets... (version: ${DATA_VERSION})`);
     
-    // Only attempt to fetch if API key is provided
-    if (API_KEY) {
-      const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}&v=${DATA_VERSION}`
-      );
+    // Check if API key is available
+    if (!API_KEY) {
+      console.error("API key is missing");
+      toast.error('Chave de API não configurada');
+      return getMockTowers();
+    }
+    
+    // Log the request details for debugging
+    const requestUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}&v=${DATA_VERSION}`;
+    console.log("Making request to:", requestUrl);
+    
+    // Make the request with a timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+    
+    try {
+      const response = await fetch(requestUrl, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        } 
+      });
       
+      clearTimeout(timeoutId);
+      
+      // Handle HTTP errors
       if (!response.ok) {
         console.error(`Failed to fetch data: ${response.status} ${response.statusText}`);
-        throw new Error(`Falha ao buscar dados do Google Sheets: ${response.status}`);
+        toast.error(`Falha ao buscar dados do Google Sheets: ${response.status}`);
+        
+        // Log detailed error information
+        try {
+          const errorData = await response.json();
+          console.error("Error details:", errorData);
+        } catch (e) {
+          console.error("Could not parse error response");
+        }
+        
+        return getMockTowers();
       }
       
+      // Parse response data
       const data = await response.json();
       console.log("Received data from Google Sheets:", data);
       
@@ -58,13 +89,14 @@ export async function fetchTowers(): Promise<Tower[]> {
         return getMockTowers();
       }
       
+      // Process the data
       const parsedTowers = parseTowersData(data.values);
       
       if (parsedTowers.length > 0) {
         console.log("Successfully parsed towers data:", parsedTowers);
         toast.success('Dados carregados com sucesso do Google Sheets');
         
-        // Store in localStorage as backup
+        // Store fetch time for reference
         try {
           localStorage.setItem('lastFetchTime', new Date().toISOString());
         } catch (e) {
@@ -75,15 +107,20 @@ export async function fetchTowers(): Promise<Tower[]> {
       } else {
         console.error("Failed to parse tower data");
         toast.error('Nenhum dado encontrado na planilha');
+        return getMockTowers();
       }
-    } else {
-      console.log('No API key provided, using mock data');
-      toast.warning('Chave de API não configurada, usando dados de demonstração');
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error("Fetch error:", fetchError);
+      
+      if (fetchError.name === 'AbortError') {
+        toast.error('Tempo excedido na requisição. Verifique sua conexão.');
+      } else {
+        toast.error(`Erro na requisição: ${fetchError.message}`);
+      }
+      
+      return getMockTowers();
     }
-
-    // Fallback to mock data when no API key or parsing issues
-    return getMockTowers();
-    
   } catch (error) {
     console.error("Error fetching towers data:", error);
     toast.error(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -125,7 +162,7 @@ function parseTowersData(rows: string[][]): Tower[] {
       headerMap[header.toLowerCase().trim()] = index;
     });
     
-    console.log("Header mapping:", headerMap);
+    console.log("Header mapping for row:", i, headerMap);
     
     // Obter valor com base no cabeçalho, com fallback para índices fixos se necessário
     const getValue = (headerNames: string[], defaultIndex?: number, defaultValue: any = ''): any => {
@@ -218,7 +255,7 @@ function parseTowersData(rows: string[][]): Tower[] {
   }
   
   console.log(`Parsed ${towers.length} towers from ${rows.length-1} rows`);
-  return towers.length > 0 ? towers : [];
+  return towers.length > 0 ? towers : getMockTowers();
 }
 
 // Mock data for demo purposes or when API is not available
