@@ -1,8 +1,8 @@
+
 #root {
-  max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
   text-align: center;
-  padding: 0 1rem;
 }
 
 .logo {
@@ -41,14 +41,21 @@
   color: #888;
 }
 
+/* Dashboard specific styles */
+.container {
+  max-width: 1440px;
+  padding: 0 1rem;
+}
+
 @media (min-width: 768px) {
-  #root {
+  .container {
     padding: 0 2rem;
   }
 }
 
 @media (min-width: 1024px) {
-  #root {
+  .container {
     padding: 0 3rem;
   }
 }
+

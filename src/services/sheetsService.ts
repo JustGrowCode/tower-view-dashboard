@@ -1,9 +1,8 @@
-
 import { Tower } from "@/types/tower";
 import { toast } from "sonner"; 
 
 const SHEET_ID = '1o-X32tleEa1GTZ9UinmpJI7pwBRjcvs4vqqkyB3vQIQ';
-const API_KEY = ''; // Insira sua chave API do Google aqui
+const API_KEY = 'AIzaSyB0JhrzJjRkyiOZibah2Z028S6G3QRCVco'; // Google API key
 const SHEET_NAME = 'torres';
 
 export async function fetchTowers(): Promise<Tower[]> {
@@ -223,37 +222,3 @@ export async function fetchTowerById(id: string): Promise<Tower | undefined> {
   const towers = await fetchTowers();
   return towers.find(tower => tower.id === id);
 }
-
-/*
-  COMO CONECTAR SUA PLANILHA DO GOOGLE SHEETS:
-  
-  1. Acesse https://console.cloud.google.com/
-  2. Crie um novo projeto ou use um existente
-  3. Habilite a API Google Sheets para esse projeto
-  4. Crie uma chave de API em Credenciais
-  5. Copie a chave API gerada e substitua a constante API_KEY acima
-  6. Certifique-se que sua planilha está pública para leitura
-  7. Mantenha a mesma estrutura de cabeçalhos na planilha para compatibilidade com o mapeamento
-  
-  CABEÇALHOS NECESSÁRIOS NA PLANILHA:
-  - nome
-  - localizacao
-  - latitude
-  - longitude
-  - valor_total_investimento
-  - valor_terreno
-  - estrutura
-  - equipamentos
-  - remuneracao_mensal
-  - rentabilidade_mensal
-  - remuneracao_anual
-  - rentabilidade_anual
-  - raes_operadora
-  - remuneracao_total
-  - rentabilidade_total
-  ...
-  
-  Obs: O sistema tentará localizar esses cabeçalhos independentemente de capitalização
-  ou nomes parciais, mas é recomendado manter os nomes exatos para melhor compatibilidade.
-*/
-
