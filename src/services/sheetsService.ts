@@ -12,7 +12,7 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60000, // 1 minute (reduced from 4 minutes)
-      cacheTime: 120000, // 2 minutes (shorter cache time)
+      gcTime: 120000, // 2 minutes (shorter cache time) - renamed from cacheTime to gcTime
     },
   },
 });
