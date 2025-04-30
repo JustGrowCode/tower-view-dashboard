@@ -9,7 +9,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  LabelList 
+  LabelList,
+  Cell
 } from "recharts";
 
 interface MarketAnalysisProps {
