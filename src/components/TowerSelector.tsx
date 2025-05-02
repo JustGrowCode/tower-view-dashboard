@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Tower } from "@/types/tower";
-import { fetchTowers } from "@/services/sheetsService";
 import {
   Select,
   SelectContent,
@@ -13,7 +12,7 @@ import { Loader2 } from "lucide-react";
 
 interface TowerSelectorProps {
   onSelect: (tower: Tower) => void;
-  availableTowers?: Tower[]; // Optional pre-loaded towers
+  availableTowers?: Tower[]; // Torres pré-carregadas
 }
 
 export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps) => {
@@ -21,49 +20,11 @@ export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps)
   const [isLoading, setIsLoading] = useState(!availableTowers);
   const [isMockData, setIsMockData] = useState(false);
 
+  // Quando as torres disponíveis mudarem, atualize o estado local
   useEffect(() => {
-    // If we already have towers provided, use those
     if (availableTowers && availableTowers.length > 0) {
       setTowers(availableTowers);
       setIsLoading(false);
-      // Check if using mock data based on the source property
-      setIsMockData(availableTowers[0]?.source === 'mock');
-      return;
-    }
-
-    async function loadTowers() {
-      try {
-        setIsLoading(true);
-        console.log("TowerSelector: Fetching towers data...");
-        const data = await fetchTowers();
-        console.log("TowerSelector: Received towers data:", data);
-        
-        setTowers(data);
-        
-        // Check if using mock data based on source property
-        setIsMockData(data[0]?.source === 'mock');
-        
-        if (data.length > 0) {
-          onSelect(data[0]);
-        }
-      } catch (error) {
-        console.error("Failed to load towers:", error);
-        setIsMockData(true);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    if (isLoading) {
-      loadTowers();
-    }
-  }, [onSelect, availableTowers, isLoading]);
-
-  // Update local state when availableTowers change
-  useEffect(() => {
-    if (availableTowers && availableTowers.length > 0) {
-      setTowers(availableTowers);
-      // Check if using mock data based on source property
       setIsMockData(availableTowers[0]?.source === 'mock');
     }
   }, [availableTowers]);

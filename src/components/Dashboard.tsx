@@ -22,11 +22,11 @@ import { Info } from "lucide-react";
 export const Dashboard = () => {
   const [selectedTower, setSelectedTower] = useState<Tower | null>(null);
 
-  // Use React Query to fetch and cache data - removed automatic refresh
-  const { data: towers, isLoading, error, isFetching, refetch } = useQuery({
+  // Use React Query para buscar e armazenar os dados
+  const { data: towers, isLoading, error, isFetching } = useQuery({
     queryKey: ['towers'],
     queryFn: fetchTowers,
-    staleTime: Infinity, // Data will never go stale automatically
+    staleTime: Infinity, // Os dados nunca ficarão obsoletos automaticamente
     retry: 2,
     meta: {
       onError: (error: Error) => {
@@ -35,23 +35,17 @@ export const Dashboard = () => {
     }
   });
 
-  // Force a refetch on first mount
-  useEffect(() => {
-    // Only refetch if we don't already have data
-    if (!towers || towers.length === 0) {
-      refetch();
-    }
-  }, [refetch, towers]);
-
-  // Display error toast when an error occurs
+  // Exibe toast de erro quando ocorrer um erro
   if (error) {
     toast.error(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 
-  // Set the first tower as selected when data loads
-  if (towers && towers.length > 0 && !selectedTower) {
-    setSelectedTower(towers[0]);
-  }
+  // Seleciona a primeira torre quando os dados carregarem
+  useEffect(() => {
+    if (towers && towers.length > 0 && !selectedTower) {
+      setSelectedTower(towers[0]);
+    }
+  }, [towers, selectedTower]);
 
   if (isLoading || isFetching) {
     return (
@@ -79,9 +73,6 @@ export const Dashboard = () => {
     );
   }
 
-  const isMockData = towers && towers.length > 0 && towers[0].source === 'mock';
-  const isCacheData = towers && towers.length > 0 && towers[0].source === 'cache';
-
   if (!selectedTower) {
     return (
       <div className="container mx-auto p-8 flex flex-col items-center justify-center min-h-screen bg-[#0d1b30] text-white">
@@ -97,6 +88,9 @@ export const Dashboard = () => {
       </div>
     );
   }
+
+  const isMockData = towers && towers.length > 0 && towers[0].source === 'mock';
+  const isCacheData = towers && towers.length > 0 && towers[0].source === 'cache';
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0d1b30] text-white">
