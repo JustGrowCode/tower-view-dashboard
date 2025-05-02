@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tower } from "@/types/tower";
 import { TowerSelector } from "./TowerSelector";
 import { Footer } from "./Footer";
@@ -16,12 +16,14 @@ import { MarketProjection } from "./MarketProjection";
 import { RefreshDataButton } from "./RefreshDataButton";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export const Dashboard = () => {
   const [selectedTower, setSelectedTower] = useState<Tower | null>(null);
 
   // Use React Query to fetch and cache data - removed automatic refresh
-  const { data: towers, isLoading, error, isFetching } = useQuery({
+  const { data: towers, isLoading, error, isFetching, refetch } = useQuery({
     queryKey: ['towers'],
     queryFn: fetchTowers,
     staleTime: Infinity, // Data will never go stale automatically
@@ -32,6 +34,14 @@ export const Dashboard = () => {
       }
     }
   });
+
+  // Force a refetch on first mount
+  useEffect(() => {
+    // Only refetch if we don't already have data
+    if (!towers || towers.length === 0) {
+      refetch();
+    }
+  }, [refetch, towers]);
 
   // Display error toast when an error occurs
   if (error) {
@@ -46,7 +56,10 @@ export const Dashboard = () => {
   if (isLoading || isFetching) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-[#0d1b30]">
-        <div className="w-16 h-16 border-4 border-[#9b87f5] border-t-transparent rounded-full animate-spin"></div>
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 border-4 border-[#9b87f5] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-white">Carregando dados...</p>
+        </div>
       </div>
     );
   }
@@ -67,6 +80,7 @@ export const Dashboard = () => {
   }
 
   const isMockData = towers && towers.length > 0 && towers[0].source === 'mock';
+  const isCacheData = towers && towers.length > 0 && towers[0].source === 'cache';
 
   if (!selectedTower) {
     return (
@@ -80,6 +94,14 @@ export const Dashboard = () => {
             <div className="mt-4 p-2 bg-amber-900/30 border border-amber-700/50 rounded-md">
               <p className="text-amber-400 text-sm text-center">
                 Utilizando dados de demonstração. Clique em "Atualizar dados" para tentar novamente.
+              </p>
+            </div>
+          )}
+          
+          {isCacheData && (
+            <div className="mt-4 p-2 bg-blue-900/30 border border-blue-700/50 rounded-md">
+              <p className="text-blue-400 text-sm text-center">
+                Utilizando dados em cache. Não foi possível obter novos dados da planilha.
               </p>
             </div>
           )}
@@ -123,11 +145,34 @@ export const Dashboard = () => {
         </div>
         
         {isMockData && (
-          <div className="p-3 bg-amber-900/30 border border-amber-700/50 rounded-md mb-6">
-            <p className="text-amber-400 text-sm text-center">
-              Atenção: Exibindo dados de demonstração. Clique em "Atualizar dados" para buscar dados reais.
-            </p>
-          </div>
+          <Alert variant="destructive" className="bg-amber-900/30 border border-amber-700/50 mb-6">
+            <Info className="h-4 w-4 text-amber-400" />
+            <AlertTitle className="text-amber-400">Atenção</AlertTitle>
+            <AlertDescription className="text-amber-300">
+              Exibindo dados de demonstração. Clique em "Atualizar dados" para buscar dados reais.
+              
+              <div className="mt-2 p-2 bg-amber-950/50 rounded">
+                <p className="text-xs">
+                  Dicas de solução:
+                  <ul className="list-disc pl-4 mt-1 space-y-1">
+                    <li>Verifique se a planilha está compartilhada corretamente</li>
+                    <li>Confirme se o nome da aba na planilha é "torres" (exatamente)</li>
+                    <li>Tente limpar o cache do navegador</li>
+                  </ul>
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {isCacheData && (
+          <Alert className="bg-blue-900/30 border border-blue-700/50 mb-6">
+            <Info className="h-4 w-4 text-blue-400" />
+            <AlertTitle className="text-blue-400">Dados em cache</AlertTitle>
+            <AlertDescription className="text-blue-300">
+              Exibindo dados em cache. Não foi possível obter novos dados da planilha.
+            </AlertDescription>
+          </Alert>
         )}
       </div>
 
