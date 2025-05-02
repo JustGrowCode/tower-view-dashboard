@@ -41,14 +41,14 @@ export async function refreshTowersData() {
 
 /**
  * Fetches tower data from Google Sheets or falls back to mock data
- * Modified to be compatible with React Query
+ * Modified to be compatible with React Query and to use a proxy to avoid CORS issues
  */
 export async function fetchTowers(context?: QueryFunctionContext): Promise<Tower[]> {
   // Usar LAST_REFRESH do config ou timestamp atual para evitar cache
   const usedTimestamp = LAST_REFRESH;
   
   try {
-    console.log(`Fetching data from Google Sheets... (timestamp: ${usedTimestamp})`);
+    console.log(`Tentando buscar dados da planilha... (timestamp: ${usedTimestamp})`);
     
     // Check if API key is available
     if (!API_KEY) {
@@ -57,9 +57,12 @@ export async function fetchTowers(context?: QueryFunctionContext): Promise<Tower
       return getMockTowers();
     }
     
-    // Add timestamp parameter to prevent caching
-    const requestUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}&_t=${usedTimestamp}`;
-    console.log("Making request to:", requestUrl);
+    // Use cors-anywhere proxy or similar public CORS proxy
+    const proxyUrl = "https://corsproxy.io/?";
+    const targetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}&_t=${usedTimestamp}`;
+    const requestUrl = proxyUrl + encodeURIComponent(targetUrl);
+    
+    console.log("Making request through proxy to:", requestUrl);
     
     // Make the request with a timeout to prevent hanging
     const controller = new AbortController();
@@ -73,8 +76,7 @@ export async function fetchTowers(context?: QueryFunctionContext): Promise<Tower
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
-        },
-        cache: 'no-store' 
+        }
       });
       
       clearTimeout(timeoutId);
@@ -82,7 +84,7 @@ export async function fetchTowers(context?: QueryFunctionContext): Promise<Tower
       // Handle HTTP errors
       if (!response.ok) {
         console.error(`Failed to fetch data: ${response.status} ${response.statusText}`);
-        toast.error(`Falha ao buscar dados do Google Sheets: ${response.status}`);
+        toast.error(`Falha ao buscar dados: ${response.status}`);
         
         // Log detailed error information
         try {
@@ -112,6 +114,10 @@ export async function fetchTowers(context?: QueryFunctionContext): Promise<Tower
         console.log("Successfully parsed towers data:", parsedTowers);
         toast.success('Dados carregados com sucesso do Google Sheets');
         
+        // Cache the successful result
+        localStorage.setItem('cachedTowers', JSON.stringify(parsedTowers));
+        localStorage.setItem('lastSuccessfulFetch', new Date().toISOString());
+        
         return parsedTowers;
       } else {
         console.error("Failed to parse tower data");
@@ -121,6 +127,18 @@ export async function fetchTowers(context?: QueryFunctionContext): Promise<Tower
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
       console.error("Fetch error:", fetchError);
+      
+      // Try to get cached data if available
+      const cachedData = localStorage.getItem('cachedTowers');
+      if (cachedData) {
+        try {
+          const parsedCache = JSON.parse(cachedData);
+          toast.warning('Usando dados em cache. Não foi possível conectar à planilha.');
+          return parsedCache;
+        } catch (e) {
+          console.error("Error parsing cached data", e);
+        }
+      }
       
       if (fetchError.name === 'AbortError') {
         toast.error('Tempo excedido na requisição. Verifique sua conexão.');

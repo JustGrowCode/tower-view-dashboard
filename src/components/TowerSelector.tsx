@@ -26,8 +26,8 @@ export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps)
     if (availableTowers && availableTowers.length > 0) {
       setTowers(availableTowers);
       setIsLoading(false);
-      // Check if using mock data based on the first tower's id format
-      setIsMockData(availableTowers[0]?.id === 'tower-1' && availableTowers.length <= 2);
+      // Check if using mock data based on the source property
+      setIsMockData(availableTowers[0]?.source === 'mock');
       return;
     }
 
@@ -40,8 +40,8 @@ export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps)
         
         setTowers(data);
         
-        // Detect if we're using mock data based on specific pattern
-        setIsMockData(data[0]?.id === 'tower-1' && data.length <= 2);
+        // Check if using mock data based on source property
+        setIsMockData(data[0]?.source === 'mock');
         
         if (data.length > 0) {
           onSelect(data[0]);
@@ -63,8 +63,8 @@ export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps)
   useEffect(() => {
     if (availableTowers && availableTowers.length > 0) {
       setTowers(availableTowers);
-      // Check if using mock data
-      setIsMockData(availableTowers[0]?.id === 'tower-1' && availableTowers.length <= 2);
+      // Check if using mock data based on source property
+      setIsMockData(availableTowers[0]?.source === 'mock');
     }
   }, [availableTowers]);
 

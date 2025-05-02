@@ -15,15 +15,19 @@ import { InvestmentDistribution } from "./InvestmentDistribution";
 import { MarketProjection } from "./MarketProjection";
 import { RefreshDataButton } from "./RefreshDataButton";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export const Dashboard = () => {
   const [selectedTower, setSelectedTower] = useState<Tower | null>(null);
 
   // Use React Query to fetch and cache data - removed automatic refresh
-  const { data: towers, isLoading, error } = useQuery({
+  const { data: towers, isLoading, error, isFetching } = useQuery({
     queryKey: ['towers'],
     queryFn: fetchTowers,
     staleTime: Infinity, // Data will never go stale automatically
+    onError: (err) => {
+      toast.error(`Erro ao carregar dados: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+    }
   });
 
   // Set the first tower as selected when data loads
@@ -31,7 +35,7 @@ export const Dashboard = () => {
     setSelectedTower(towers[0]);
   }
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-[#0d1b30]">
         <div className="w-16 h-16 border-4 border-[#9b87f5] border-t-transparent rounded-full animate-spin"></div>
@@ -54,6 +58,8 @@ export const Dashboard = () => {
     );
   }
 
+  const isMockData = towers && towers.length > 0 && towers[0].source === 'mock';
+
   if (!selectedTower) {
     return (
       <div className="container mx-auto p-8 flex flex-col items-center justify-center min-h-screen bg-[#0d1b30] text-white">
@@ -61,6 +67,15 @@ export const Dashboard = () => {
           <h2 className="text-2xl font-bold mb-4 text-center">Carregando Dashboard de Torres</h2>
           <p className="mb-4 text-gray-300">Selecione uma torre para visualizar os detalhes do investimento:</p>
           <TowerSelector onSelect={setSelectedTower} availableTowers={towers || []} />
+          
+          {isMockData && (
+            <div className="mt-4 p-2 bg-amber-900/30 border border-amber-700/50 rounded-md">
+              <p className="text-amber-400 text-sm text-center">
+                Utilizando dados de demonstração. Clique em "Atualizar dados" para tentar novamente.
+              </p>
+            </div>
+          )}
+          
           <div className="mt-4 flex justify-center">
             <RefreshDataButton />
           </div>
@@ -98,6 +113,14 @@ export const Dashboard = () => {
         <div className="grid grid-cols-1 mb-6">
           <LocationDetails tower={selectedTower} />
         </div>
+        
+        {isMockData && (
+          <div className="p-3 bg-amber-900/30 border border-amber-700/50 rounded-md mb-6">
+            <p className="text-amber-400 text-sm text-center">
+              Atenção: Exibindo dados de demonstração. Clique em "Atualizar dados" para buscar dados reais.
+            </p>
+          </div>
+        )}
       </div>
 
       <Footer />

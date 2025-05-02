@@ -12,7 +12,7 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: Infinity, // Data will never go stale automatically
       gcTime: 3600000, // 1 hour - keep in cache longer since we're not auto-refreshing
-      retry: 1, // Only retry once on failure
+      retry: 2, // Retry twice on failure
     },
   },
 });
@@ -25,3 +25,6 @@ export const updateRefreshTimestamp = () => {
   LAST_REFRESH = Date.now();
   return LAST_REFRESH;
 };
+
+// Initialize timestamp on load
+updateRefreshTimestamp();

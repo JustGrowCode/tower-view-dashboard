@@ -3,16 +3,24 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { refreshTowersData } from "@/services/sheetsService";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export const RefreshDataButton = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<'planilha' | 'demo' | 'cache' | 'desconhecido'>('desconhecido');
   
   // Get last update time from localStorage on component mount
   useEffect(() => {
     const lastFetchTime = localStorage.getItem('lastFetchTime');
-    if (lastFetchTime) {
+    const lastSuccessfulFetch = localStorage.getItem('lastSuccessfulFetch');
+    
+    if (lastSuccessfulFetch) {
+      setLastUpdate(lastSuccessfulFetch);
+      setDataSource('planilha');
+    } else if (lastFetchTime) {
       setLastUpdate(lastFetchTime);
+      setDataSource('cache');
     }
   }, []);
   
@@ -22,12 +30,23 @@ export const RefreshDataButton = () => {
       await refreshTowersData();
       
       // Update the last update time
-      const newUpdateTime = localStorage.getItem('lastFetchTime');
-      if (newUpdateTime) {
-        setLastUpdate(newUpdateTime);
+      const lastSuccessfulFetch = localStorage.getItem('lastSuccessfulFetch');
+      if (lastSuccessfulFetch) {
+        setLastUpdate(lastSuccessfulFetch);
+        setDataSource('planilha');
+      } else {
+        const lastFetchTime = localStorage.getItem('lastFetchTime');
+        if (lastFetchTime) {
+          setLastUpdate(lastFetchTime);
+          setDataSource('cache');
+        } else {
+          setDataSource('demo');
+        }
       }
     } catch (error) {
       console.error("Error refreshing data:", error);
+      toast.error("Erro ao atualizar dados");
+      setDataSource('demo');
     } finally {
       setTimeout(() => setIsRefreshing(false), 1000);
     }
@@ -55,7 +74,12 @@ export const RefreshDataButton = () => {
         <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         {isRefreshing ? 'Atualizando...' : 'Atualizar dados'}
       </Button>
-      <span className="text-xs text-gray-400">Última atualização: {formattedLastUpdate}</span>
+      <span className="text-xs text-gray-400">
+        Última atualização: {formattedLastUpdate}
+        {dataSource === 'planilha' && <span className="text-green-400"> (Planilha)</span>}
+        {dataSource === 'cache' && <span className="text-yellow-400"> (Cache)</span>}
+        {dataSource === 'demo' && <span className="text-red-400"> (Demo)</span>}
+      </span>
     </div>
   );
 };
