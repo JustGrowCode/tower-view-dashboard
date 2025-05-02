@@ -6,7 +6,7 @@ import { Tower } from "@/types/tower";
  */
 export function parseCurrency(value: string | number): number {
   if (typeof value === 'number') return value;
-  if (!value) return 0;
+  if (!value || value === '') return 0;
   
   // Tenta analisar como número simples primeiro
   if (!isNaN(Number(value))) {
@@ -15,6 +15,7 @@ export function parseCurrency(value: string | number): number {
   
   // Para formato de moeda (R$ 1.234,56)
   try {
+    // Remove R$, espaços e pontos, substitui vírgula por ponto
     const cleaned = value.replace(/[R$\s.]/g, '').replace(',', '.');
     return parseFloat(cleaned) || 0;
   } catch (e) {
@@ -32,17 +33,18 @@ export function parseTowersData(rows: string[][]): Tower[] {
     return [];
   }
   
+  // Converte cabeçalhos para minúsculas para comparações mais fáceis
   const headers = rows[0].map(h => h.toLowerCase().trim());
   console.log("Cabeçalhos detectados:", headers);
   
   const towers: Tower[] = [];
   
-  // Pula a linha de cabeçalho
+  // Pula a linha de cabeçalhos
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    if (row.length < 3) continue; // Pula linhas vazias
+    if (row.length < 3 || !row[0]) continue; // Pula linhas vazias
     
-    // Função para obter valor baseado nos possíveis nomes de cabeçalho
+    // Função de ajuda para obter valores
     const getValue = (fieldNames: string[], defaultValue: any = ''): any => {
       for (const name of fieldNames) {
         const index = headers.indexOf(name.toLowerCase());
@@ -53,17 +55,29 @@ export function parseTowersData(rows: string[][]): Tower[] {
       return defaultValue;
     };
     
-    // Função para obter valor numérico
+    // Função para obter valores numéricos
     const getNumericValue = (fieldNames: string[], defaultValue = 0): number => {
       const value = getValue(fieldNames);
       return parseCurrency(value || defaultValue);
     };
     
     try {
+      // Logando valores para debug
+      console.log(`Processando linha ${i}:`, row);
+      
+      // Extraindo o nome e a localização
+      const name = getValue(['nome', 'projeto', 'nome_projeto', 'torre']);
+      const city = getValue(['cidade', 'city']);
+      const state = getValue(['estado', 'state', 'uf']);
+      const location = `${city} - ${state}`;
+      
+      console.log(`Nome: ${name}, Localização: ${location}`);
+      
+      // Construindo o objeto Tower
       const tower: Tower = {
         id: `tower-${i}`,
-        name: getValue(['projeto', 'nome', 'nome_projeto', 'torre'], `Torre ${i}`),
-        location: `${getValue(['cidade', 'city'])} - ${getValue(['estado', 'state', 'uf'])}`,
+        name: name || `Torre ${i}`,
+        location: location,
         coordinates: {
           lat: getNumericValue(['latitude', 'lat'], -23.5505),
           lng: getNumericValue(['longitude', 'lng', 'long'], -46.6333),
@@ -105,17 +119,14 @@ export function parseTowersData(rows: string[][]): Tower[] {
         source: 'sheets'
       };
       
-      // Ajuste adicional para periodicidade de contrato
-      if (tower.contract.periods.includes('+')) {
-        const parts = tower.contract.periods.split('+').map(p => parseInt(p.trim()));
-        const validParts = parts.filter(p => !isNaN(p));
-        if (validParts.length > 0) {
-          tower.contract.duration = validParts.reduce((sum, val) => sum + val, 0);
-        }
+      // Verificar se os campos essenciais foram preenchidos
+      if (tower.name && tower.investment.total > 0) {
+        console.log(`Torre válida encontrada: ${tower.name}`);
+        towers.push(tower);
+      } else {
+        console.warn(`Linha ${i}: torre com dados incompletos, ignorando`);
       }
       
-      towers.push(tower);
-      console.log(`Torre analisada: ${tower.name}`);
     } catch (error) {
       console.error(`Erro ao processar linha ${i}:`, error);
     }

@@ -12,7 +12,7 @@ import { Loader2 } from "lucide-react";
 
 interface TowerSelectorProps {
   onSelect: (tower: Tower) => void;
-  availableTowers?: Tower[]; // Torres pré-carregadas
+  availableTowers?: Tower[];
 }
 
 export const TowerSelector = ({ onSelect, availableTowers }: TowerSelectorProps) => {

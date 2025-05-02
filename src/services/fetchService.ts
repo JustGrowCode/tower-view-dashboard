@@ -1,132 +1,97 @@
 
 import { Tower } from "@/types/tower";
 import { toast } from "sonner";
-import { API_KEY, SHEET_ID, SHEET_NAME, updateRefreshTimestamp } from "./sheetsConfig";
+import { API_KEY, SHEET_ID, SHEET_NAME } from "./sheetsConfig";
 import { parseTowersData } from "@/utils/towerDataParser";
 import { getMockTowers } from "./mockTowerService";
-import { getNextProxy, updateCurrentProxyIndex, resetProxyState, CORS_PROXIES } from "./proxyService";
-import { performFetch } from "./diagnosticsService";
-import { cacheTowers, getCachedTowers, storeSuccessfulFetch } from "./cacheService";
+
+// Lista de proxies CORS para tentar em sequência
+const CORS_PROXIES = [
+  "https://corsproxy.io/?",
+  "https://api.allorigins.win/raw?url=",
+  "https://cors-anywhere.herokuapp.com/"
+];
 
 /**
- * Core functionality to fetch data from Google Sheets
+ * Função principal para buscar dados do Google Sheets
  */
-export async function fetchSheetsData(): Promise<Tower[] | null> {
-  // Use timestamp for cache busting
-  const timestamp = updateRefreshTimestamp();
+export async function fetchSheetsData(): Promise<Tower[]> {
+  console.log("Iniciando busca de dados da planilha...");
   
-  try {
-    console.log(`Buscando dados da planilha... (timestamp: ${timestamp})`);
-    
-    // Check if API key is available
-    if (!API_KEY) {
-      console.error("API key is missing");
-      toast.error('Chave de API não configurada');
-      localStorage.setItem('googleAPIConfigured', 'false');
-      return null;
-    }
-    
-    localStorage.setItem('googleAPIConfigured', 'true');
-    
-    // Target API URL
-    const targetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}&_t=${timestamp}`;
-    
-    // Try each proxy in sequence until one works
-    let lastError: Error | null = null;
-    resetProxyState();
-    
-    for (let attempt = 0; attempt < CORS_PROXIES.length; attempt++) {
-      const proxyIndex = (attempt) % CORS_PROXIES.length;
-      const proxy = getNextProxy();
+  // Adiciona timestamp para evitar cache do navegador
+  const timestamp = new Date().getTime();
+  const targetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}&_t=${timestamp}`;
+  
+  // Tenta cada proxy em sequência
+  for (const proxy of CORS_PROXIES) {
+    try {
+      console.log(`Tentando proxy: ${proxy}`);
+      const proxyUrl = proxy + encodeURIComponent(targetUrl);
       
-      const proxyUrl = proxy.url + encodeURIComponent(targetUrl);
+      // Configuração com timeout mais longo (60 segundos)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
       
-      console.log(`Tentativa ${attempt + 1}: Usando proxy ${proxy.name} para acessar Google Sheets`);
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        signal: controller.signal
+      });
       
-      try {
-        // Make the request with a timeout to prevent hanging
-        const response = await performFetch(proxyUrl, {
-          headers: {
-            'Accept': 'application/json',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          }
-        }, 30000); // 30s timeout (aumentado para melhor performance)
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Dados recebidos do Google Sheets:", data);
         
-        // If request was successful, update the current proxy index for next time
-        if (response.ok) {
-          console.log(`Proxy ${proxy.name} funcionou com sucesso!`);
-          updateCurrentProxyIndex(proxyIndex);
-          
-          // Parse response data
-          const data = await response.json();
-          console.log("Dados recebidos do Google Sheets:", data);
-          
-          if (!data.values || data.values.length < 2) {
-            console.error("Dados insuficientes retornados da planilha");
-            toast.error('Dados insuficientes na planilha');
-            return null;
-          }
-          
-          // Process the data
-          const parsedTowers = parseTowersData(data.values);
-          
-          if (parsedTowers.length > 0) {
-            console.log("Dados das torres analisados com sucesso:", parsedTowers);
-            toast.success('Dados carregados com sucesso do Google Sheets');
-            
-            // Set source to be explicitly from sheets
-            parsedTowers.forEach(tower => {
-              tower.source = 'sheets';
-            });
-            
-            // Cache the successful result
-            cacheTowers(parsedTowers);
-            storeSuccessfulFetch();
-            
-            return parsedTowers;
-          } else {
-            console.error("Falha ao analisar dados das torres");
-            toast.error('Nenhuma torre encontrada na planilha');
-            return null;
-          }
-        } else {
-          // Log the error status
-          console.error(`Proxy ${proxy.name} retornou status ${response.status}`);
-          lastError = new Error(`HTTP status ${response.status}`);
-          
-          // Try to get detailed error info
-          try {
-            const errorData = await response.json();
-            console.error("Google Sheets API Error:", errorData);
-            if (errorData.error?.message) {
-              lastError = new Error(errorData.error.message);
-            }
-          } catch (e) {
-            // Couldn't parse JSON error, continue with next proxy
-          }
+        if (!data.values || data.values.length < 2) {
+          console.error("Dados insuficientes na planilha");
+          continue; // Tenta próximo proxy
         }
-      } catch (error: any) {
-        console.error(`Erro com o proxy ${proxy.name}:`, error);
-        lastError = error;
-        // Continue to next proxy
+        
+        // Processa os dados recebidos
+        const parsedTowers = parseTowersData(data.values);
+        
+        if (parsedTowers.length > 0) {
+          console.log(`Sucesso! ${parsedTowers.length} torres encontradas`);
+          toast.success(`${parsedTowers.length} torres carregadas com sucesso`);
+          
+          // Marca dados como vindos da planilha
+          parsedTowers.forEach(tower => { tower.source = 'sheets'; });
+          
+          // Salva em cache local
+          localStorage.setItem('cachedTowers', JSON.stringify(parsedTowers));
+          localStorage.setItem('lastFetchTime', new Date().toISOString());
+          
+          return parsedTowers;
+        }
+      } else {
+        console.error(`Erro HTTP ${response.status} com proxy ${proxy}`);
       }
+    } catch (error) {
+      console.error(`Falha com proxy ${proxy}:`, error);
+      // Continua para o próximo proxy
     }
-    
-    // If we get here, all proxies failed
-    console.error("Todos os proxies falharam ao acessar a API Google Sheets");
-    if (lastError) {
-      toast.error(`Não foi possível acessar a API: ${lastError.message}`);
-    } else {
-      toast.error("Não foi possível acessar a API da planilha");
-    }
-    
-    return null;
-    
-  } catch (error: any) {
-    console.error("Erro ao buscar dados do Google Sheets:", error);
-    toast.error(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-    return null;
   }
+  
+  // Se todos os proxies falharam, tenta usar cache local
+  try {
+    const cachedData = localStorage.getItem('cachedTowers');
+    if (cachedData) {
+      const towers = JSON.parse(cachedData) as Tower[];
+      towers.forEach(tower => { tower.source = 'cache'; });
+      toast.warning("Usando dados em cache. Não foi possível conectar à planilha.");
+      return towers;
+    }
+  } catch (error) {
+    console.error("Erro ao acessar cache:", error);
+  }
+  
+  // Último recurso: usar dados de demonstração
+  toast.error("Usando dados de demonstração. Não foi possível obter dados da planilha.");
+  return getMockTowers();
 }
