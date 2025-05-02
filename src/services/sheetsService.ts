@@ -98,7 +98,7 @@ export async function fetchTowers(): Promise<Tower[]> {
         toast.error('Nenhum dado encontrado na planilha');
         return getMockTowers();
       }
-    } catch (fetchError) {
+    } catch (fetchError: any) {
       clearTimeout(timeoutId);
       console.error("Fetch error:", fetchError);
       
@@ -110,7 +110,7 @@ export async function fetchTowers(): Promise<Tower[]> {
       
       return getMockTowers();
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching towers data:", error);
     toast.error(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     return getMockTowers(); // Fallback to mock data

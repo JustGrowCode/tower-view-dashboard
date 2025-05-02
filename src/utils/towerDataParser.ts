@@ -83,7 +83,7 @@ export function parseTowersData(rows: string[][]): Tower[] {
       // Create tower object with mapped data
       const tower: Tower = {
         id: `tower-${i}`,
-        name: getValue(['projeto', 'projeto'], 1, `Torre ${i}`),
+        name: getValue(['projeto'], 1, `Torre ${i}`),
         location: `${getValue(['cidade'], 2, 'Cidade')} - ${getValue(['estado'], 3, 'UF')}`,
         coordinates: {
           lat: getNumericValue(['latitude', 'lat'], undefined, -23.5505),
@@ -92,10 +92,10 @@ export function parseTowersData(rows: string[][]): Tower[] {
         investment: {
           total: getNumericValue(['valor_total_investimento'], 10, 231000),
           land: getNumericValue(['valor_terreno'], 5, 150400),
-          structure: getNumericValue(['estrutura'], 6, 51000),
-          equipment: getNumericValue(['equipamentos'], 7, 30000),
+          structure: getNumericValue(['estrutura', 'estimativa_negociacao'], 6, 51000),
+          equipment: getNumericValue(['equipamentos', 'comissao_hunter'], 7, 30000),
           other: getNumericValue(['despesas_documentacao'], 8, 0),
-          locationDetails: getValue(['local', 'localização', 'detalhes'], 9, 'Local pronto para implantação'),
+          locationDetails: getValue(['local', 'localização', 'detalhes', 'consultoria_estruturacao'], 9, 'Local pronto para implantação'),
         },
         returns: {
           monthly: getNumericValue(['remuneracao_mensal_prevista'], 11, 3000),
@@ -106,25 +106,45 @@ export function parseTowersData(rows: string[][]): Tower[] {
         },
         contract: {
           duration: parseInt(getValue(['periodo_contrato'], 16, '30')) || 30,
-          periods: getValue(['periodo'], 16, '10 + 10 + 10'),
+          periods: getValue(['periodo_contrato'], 16, '10 + 10 + 10'),
           payback: getNumericValue(['payback', 'periodo_estudo'], 19, 77),
           expiryLucrativePercentage: getNumericValue(['expiry'], 20, 80.26),
         },
         market: {
-          cagr: getNumericValue(['cagr_2024_2029_%'], 21, 7.84),
-          topMarket: getValue(['maior_mercado'], 22, 'América do Norte e Ásia Pacífico'),
+          cagr: getNumericValue(['cagr_2024_2029_%'], 22, 7.84),
+          topMarket: getValue(['maior_mercado'], 24, 'América do Norte e Ásia Pacífico'),
           growthRegion: getValue(['mercado_crescimento_mais_rapido'], 23, 'América do Norte e Ásia Pacífico'),
-          currentYear: parseInt(getValue(['ano_atual'], 24, '2020')) || 2020,
-          projectedYear: parseInt(getValue(['ano_projetado'], 25, '2028')) || 2028,
-          currentValue: getNumericValue(['tamanho_mercado_2024_usd'], 26, 7.1),
-          projectedValue: getNumericValue(['tamanho_mercado_2029_usd'], 27, 12.5),
+          currentYear: 2024,
+          projectedYear: 2029,
+          currentValue: getNumericValue(['tamanho_mercado_2024_usd'], 20, 7.1),
+          projectedValue: getNumericValue(['tamanho_mercado_2029_usd'], 21, 12.5),
         },
         images: {
-          location: getValue(['imagem_terreno_url'], 28, '/lovable-uploads/212f763a-68d2-4f3e-86a6-98e55844987b.png'),
-          tower: getValue(['imagem_torre_url'], 29, '/lovable-uploads/212f763a-68d2-4f3e-86a6-98e55844987b.png'),
+          location: getValue(['imagem_terreno_url'], 27, '/lovable-uploads/212f763a-68d2-4f3e-86a6-98e55844987b.png'),
+          tower: getValue(['imagem_torre_url'], 28, '/lovable-uploads/212f763a-68d2-4f3e-86a6-98e55844987b.png'),
         },
         source: 'sheets'
       };
+      
+      // Ajuste adicional para o campo de duração do contrato
+      const contractText = tower.contract.periods;
+      if (contractText && contractText.includes('anos')) {
+        const durationMatch = contractText.match(/(\d+)\s*\+\s*(\d+)\s*\+\s*(\d+)/);
+        if (durationMatch) {
+          const total = parseInt(durationMatch[1]) + parseInt(durationMatch[2]) + parseInt(durationMatch[3]);
+          tower.contract.duration = total;
+        } else {
+          const yearMatch = contractText.match(/(\d+)\s*anos/);
+          if (yearMatch) {
+            tower.contract.duration = parseInt(yearMatch[1]);
+          }
+        }
+      }
+      
+      // Limpeza da string de períodos
+      if (tower.contract.periods && tower.contract.periods.includes('anos')) {
+        tower.contract.periods = tower.contract.periods.replace(/\s*anos/, '');
+      }
       
       towers.push(tower);
       console.log(`Successfully processed row ${i} into tower:`, tower.name);
