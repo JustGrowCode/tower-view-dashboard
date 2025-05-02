@@ -41,6 +41,6 @@ export interface Tower {
     location: string;
     tower: string;
   };
-  // New optional field to track data source
-  source?: 'sheets' | 'mock';
+  // Updated to include 'cache' as a valid source type
+  source?: 'sheets' | 'mock' | 'cache';
 }
