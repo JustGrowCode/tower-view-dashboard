@@ -10,8 +10,9 @@ export const SHEET_NAME = 'torres';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60000, // 1 minute
-      gcTime: 120000, // 2 minutes
+      staleTime: Infinity, // Data will never go stale automatically
+      gcTime: 3600000, // 1 hour - keep in cache longer since we're not auto-refreshing
+      retry: 1, // Only retry once on failure
     },
   },
 });

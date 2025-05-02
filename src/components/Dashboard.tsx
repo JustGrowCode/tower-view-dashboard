@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tower } from "@/types/tower";
 import { TowerSelector } from "./TowerSelector";
@@ -19,14 +18,12 @@ import { useQuery } from "@tanstack/react-query";
 export const Dashboard = () => {
   const [selectedTower, setSelectedTower] = useState<Tower | null>(null);
 
-  // Use React Query to fetch and cache data
-  // Will refetch every 5 minutes or when manually triggered
+  // Use React Query to fetch and cache data - removed automatic refresh
   const { data: towers, isLoading, error } = useQuery({
     queryKey: ['towers'],
     queryFn: fetchTowers,
-    refetchInterval: 300000, // 5 minutes
-    refetchOnWindowFocus: true,
-    staleTime: 240000, // 4 minutes
+    // Removed refetchInterval and refetchOnWindowFocus
+    staleTime: Infinity, // Data will never go stale automatically
   });
 
   // Set the first tower as selected when data loads

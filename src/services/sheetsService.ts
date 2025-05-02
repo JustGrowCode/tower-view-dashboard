@@ -10,22 +10,43 @@ import { getMockTowers } from "./mockTowerService";
  */
 export async function refreshTowersData() {
   toast.info("Atualizando dados...");
-  // Update timestamp to track refresh
-  updateRefreshTimestamp();
-  localStorage.removeItem('cachedTowers'); // Clear any local storage cache
-  // Force refetch by invalidating and then refetching
+  
+  // Update timestamp to track refresh and prevent caching
+  const timestamp = updateRefreshTimestamp();
+  
+  // Clear any local storage cache
+  localStorage.removeItem('cachedTowers');
+  
+  // Force refetch by invalidating, removing, and then refetching
   await queryClient.invalidateQueries({ queryKey: ['towers'] });
+  await queryClient.removeQueries({ queryKey: ['towers'] });
+  
   // Immediately refetch to ensure fresh data
-  await queryClient.refetchQueries({ queryKey: ['towers'] });
-  toast.success("Dados atualizados com sucesso!");
+  const result = await queryClient.fetchQuery({ 
+    queryKey: ['towers'],
+    queryFn: () => fetchTowers(timestamp),
+  });
+  
+  if (result.length > 0) {
+    // Store last successful fetch time
+    localStorage.setItem('lastFetchTime', new Date().toISOString());
+    toast.success("Dados atualizados com sucesso!");
+  } else {
+    toast.error("Nenhum dado encontrado na planilha.");
+  }
+  
+  return result;
 }
 
 /**
  * Fetches tower data from Google Sheets or falls back to mock data
+ * @param timestamp Optional timestamp to prevent caching
  */
-export async function fetchTowers(): Promise<Tower[]> {
+export async function fetchTowers(timestamp?: number): Promise<Tower[]> {
+  const usedTimestamp = timestamp || LAST_REFRESH;
+  
   try {
-    console.log(`Fetching data from Google Sheets... (timestamp: ${LAST_REFRESH})`);
+    console.log(`Fetching data from Google Sheets... (timestamp: ${usedTimestamp})`);
     
     // Check if API key is available
     if (!API_KEY) {
@@ -34,8 +55,8 @@ export async function fetchTowers(): Promise<Tower[]> {
       return getMockTowers();
     }
     
-    // Log the request details for debugging - removido parâmetro v= que estava causando o erro 400
-    const requestUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+    // Add timestamp parameter to prevent caching
+    const requestUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}&_t=${usedTimestamp}`;
     console.log("Making request to:", requestUrl);
     
     // Make the request with a timeout to prevent hanging
@@ -47,7 +68,11 @@ export async function fetchTowers(): Promise<Tower[]> {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-        } 
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        cache: 'no-store' 
       });
       
       clearTimeout(timeoutId);
@@ -84,13 +109,6 @@ export async function fetchTowers(): Promise<Tower[]> {
       if (parsedTowers.length > 0) {
         console.log("Successfully parsed towers data:", parsedTowers);
         toast.success('Dados carregados com sucesso do Google Sheets');
-        
-        // Store fetch time for reference
-        try {
-          localStorage.setItem('lastFetchTime', new Date().toISOString());
-        } catch (e) {
-          console.warn('Could not save fetch time to localStorage', e);
-        }
         
         return parsedTowers;
       } else {

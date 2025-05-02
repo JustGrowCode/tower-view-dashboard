@@ -3,15 +3,31 @@ import { Tower } from "@/types/tower";
 
 /**
  * Parses currency strings like "R$ 1.234,56" to number
+ * Also handles plain numbers, which is now the preferred format
  */
 export function parseCurrency(value: string): number {
   if (!value) return 0;
   
-  // Remove currency symbol, dots for thousands, and replace comma with dot for decimal
-  return parseFloat(
-    value.replace(/[R$\s.]/g, '')
-      .replace(',', '.')
-  );
+  console.log(`Parsing currency value: "${value}"`);
+  
+  // Try to parse as a plain number first (preferred format)
+  if (!isNaN(Number(value))) {
+    const numValue = Number(value);
+    console.log(`Parsed as plain number: ${numValue}`);
+    return numValue;
+  }
+  
+  // Handle currency format (for backward compatibility)
+  try {
+    // Remove currency symbol, dots for thousands, and replace comma with dot for decimal
+    const cleaned = value.replace(/[R$\s.]/g, '').replace(',', '.');
+    const numValue = parseFloat(cleaned);
+    console.log(`Parsed from currency format: ${numValue} (from: ${value})`);
+    return numValue;
+  } catch (e) {
+    console.error(`Error parsing currency value: "${value}"`, e);
+    return 0;
+  }
 }
 
 /**
@@ -60,7 +76,7 @@ export function parseTowersData(rows: string[][]): Tower[] {
       return defaultValue;
     };
     
-    // Obter valor numérico
+    // Obter valor numérico - melhorado para lidar com números simples
     const getNumericValue = (headerNames: string[], defaultIndex?: number, defaultValue = 0): number => {
       const value = getValue(headerNames, defaultIndex);
       
@@ -68,10 +84,16 @@ export function parseTowersData(rows: string[][]): Tower[] {
       if (typeof value === 'number') return value;
       
       try {
-        // Tentar analisar como moeda ou número
+        // Para valores simples numéricos (formato preferido agora)
+        if (typeof value === 'string' && !isNaN(Number(value))) {
+          return Number(value);
+        }
+        
+        // Para compatibilidade com formatos de moeda
         if (typeof value === 'string' && (value.includes('R$') || value.includes('.') || value.includes(','))) {
           return parseCurrency(value);
         }
+        
         return parseFloat(value) || defaultValue;
       } catch (e) {
         console.warn(`Failed to parse numeric value: ${value}`, e);
