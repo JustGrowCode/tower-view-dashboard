@@ -16,11 +16,11 @@ export const queryClient = new QueryClient({
   },
 });
 
-// Use a version key to force cache invalidation
-export let DATA_VERSION = Date.now();
+// Use a timestamp to track when data was last refreshed
+export let LAST_REFRESH = Date.now();
 
 // Function to update data version to force cache invalidation
-export const updateDataVersion = () => {
-  DATA_VERSION = Date.now();
-  return DATA_VERSION;
+export const updateRefreshTimestamp = () => {
+  LAST_REFRESH = Date.now();
+  return LAST_REFRESH;
 };

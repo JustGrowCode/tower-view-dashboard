@@ -81,7 +81,8 @@ export const Dashboard = () => {
       />
 
       <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Adicionado mt-16 para criar espaçamento na parte superior */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 mt-16">
           <InvestmentSummary tower={selectedTower} />
           <ReturnMetrics tower={selectedTower} />
           <ContractDetails tower={selectedTower} />

@@ -1,7 +1,7 @@
 
 import { Tower } from "@/types/tower";
 import { toast } from "sonner";
-import { queryClient, SHEET_ID, SHEET_NAME, API_KEY, DATA_VERSION, updateDataVersion } from "./sheetsConfig";
+import { queryClient, SHEET_ID, SHEET_NAME, API_KEY, LAST_REFRESH, updateRefreshTimestamp } from "./sheetsConfig";
 import { parseTowersData } from "@/utils/towerDataParser";
 import { getMockTowers } from "./mockTowerService";
 
@@ -10,8 +10,8 @@ import { getMockTowers } from "./mockTowerService";
  */
 export async function refreshTowersData() {
   toast.info("Atualizando dados...");
-  // Update version to force cache invalidation
-  updateDataVersion();
+  // Update timestamp to track refresh
+  updateRefreshTimestamp();
   localStorage.removeItem('cachedTowers'); // Clear any local storage cache
   // Force refetch by invalidating and then refetching
   await queryClient.invalidateQueries({ queryKey: ['towers'] });
@@ -25,8 +25,7 @@ export async function refreshTowersData() {
  */
 export async function fetchTowers(): Promise<Tower[]> {
   try {
-    // Add version to prevent caching issues
-    console.log(`Fetching data from Google Sheets... (version: ${DATA_VERSION})`);
+    console.log(`Fetching data from Google Sheets... (timestamp: ${LAST_REFRESH})`);
     
     // Check if API key is available
     if (!API_KEY) {
@@ -35,8 +34,8 @@ export async function fetchTowers(): Promise<Tower[]> {
       return getMockTowers();
     }
     
-    // Log the request details for debugging
-    const requestUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}&v=${DATA_VERSION}`;
+    // Log the request details for debugging - removido parâmetro v= que estava causando o erro 400
+    const requestUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
     console.log("Making request to:", requestUrl);
     
     // Make the request with a timeout to prevent hanging
