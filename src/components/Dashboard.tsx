@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Tower } from "@/types/tower";
 import { TowerSelector } from "./TowerSelector";
@@ -22,7 +23,6 @@ export const Dashboard = () => {
   const { data: towers, isLoading, error } = useQuery({
     queryKey: ['towers'],
     queryFn: fetchTowers,
-    // Removed refetchInterval and refetchOnWindowFocus
     staleTime: Infinity, // Data will never go stale automatically
   });
 

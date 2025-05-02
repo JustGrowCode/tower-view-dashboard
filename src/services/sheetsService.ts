@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { queryClient, SHEET_ID, SHEET_NAME, API_KEY, LAST_REFRESH, updateRefreshTimestamp } from "./sheetsConfig";
 import { parseTowersData } from "@/utils/towerDataParser";
 import { getMockTowers } from "./mockTowerService";
+import { QueryFunctionContext } from "@tanstack/react-query";
 
 /**
  * Refreshes the towers data by invalidating cache and triggering a refetch
@@ -24,10 +25,10 @@ export async function refreshTowersData() {
   // Immediately refetch to ensure fresh data
   const result = await queryClient.fetchQuery({ 
     queryKey: ['towers'],
-    queryFn: () => fetchTowers(timestamp),
+    queryFn: fetchTowers,
   });
   
-  if (result.length > 0) {
+  if (result && result.length > 0) {
     // Store last successful fetch time
     localStorage.setItem('lastFetchTime', new Date().toISOString());
     toast.success("Dados atualizados com sucesso!");
@@ -40,10 +41,11 @@ export async function refreshTowersData() {
 
 /**
  * Fetches tower data from Google Sheets or falls back to mock data
- * @param timestamp Optional timestamp to prevent caching
+ * Modified to be compatible with React Query
  */
-export async function fetchTowers(timestamp?: number): Promise<Tower[]> {
-  const usedTimestamp = timestamp || LAST_REFRESH;
+export async function fetchTowers(context?: QueryFunctionContext): Promise<Tower[]> {
+  // Usar LAST_REFRESH do config ou timestamp atual para evitar cache
+  const usedTimestamp = LAST_REFRESH;
   
   try {
     console.log(`Fetching data from Google Sheets... (timestamp: ${usedTimestamp})`);
