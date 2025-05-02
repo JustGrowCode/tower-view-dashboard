@@ -90,22 +90,6 @@ export const Dashboard = () => {
           <p className="mb-4 text-gray-300">Selecione uma torre para visualizar os detalhes do investimento:</p>
           <TowerSelector onSelect={setSelectedTower} availableTowers={towers || []} />
           
-          {isMockData && (
-            <div className="mt-4 p-2 bg-amber-900/30 border border-amber-700/50 rounded-md">
-              <p className="text-amber-400 text-sm text-center">
-                Utilizando dados de demonstração. Clique em "Atualizar dados" para tentar novamente.
-              </p>
-            </div>
-          )}
-          
-          {isCacheData && (
-            <div className="mt-4 p-2 bg-blue-900/30 border border-blue-700/50 rounded-md">
-              <p className="text-blue-400 text-sm text-center">
-                Utilizando dados em cache. Não foi possível obter novos dados da planilha.
-              </p>
-            </div>
-          )}
-          
           <div className="mt-4 flex justify-center">
             <RefreshDataButton />
           </div>
@@ -150,17 +134,6 @@ export const Dashboard = () => {
             <AlertTitle className="text-amber-400">Atenção</AlertTitle>
             <AlertDescription className="text-amber-300">
               Exibindo dados de demonstração. Clique em "Atualizar dados" para buscar dados reais.
-              
-              <div className="mt-2 p-2 bg-amber-950/50 rounded">
-                <p className="text-xs">
-                  Dicas de solução:
-                  <ul className="list-disc pl-4 mt-1 space-y-1">
-                    <li>Verifique se a planilha está compartilhada corretamente</li>
-                    <li>Confirme se o nome da aba na planilha é "torres" (exatamente)</li>
-                    <li>Tente limpar o cache do navegador</li>
-                  </ul>
-                </p>
-              </div>
             </AlertDescription>
           </Alert>
         )}

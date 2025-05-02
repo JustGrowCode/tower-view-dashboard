@@ -52,7 +52,6 @@ export async function refreshTowersData() {
 
 /**
  * Fetches tower data from Google Sheets or falls back to mock data
- * Try multiple CORS proxies if one fails
  */
 export async function fetchTowers(context?: QueryFunctionContext): Promise<Tower[]> {
   // Check for cached result first if we're not explicitly refreshing

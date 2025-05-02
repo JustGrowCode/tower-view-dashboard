@@ -16,7 +16,7 @@ export async function fetchSheetsData(): Promise<Tower[] | null> {
   const timestamp = updateRefreshTimestamp();
   
   try {
-    console.log(`Tentando buscar dados da planilha... (timestamp: ${timestamp})`);
+    console.log(`Buscando dados da planilha... (timestamp: ${timestamp})`);
     
     // Check if API key is available
     if (!API_KEY) {
@@ -41,7 +41,7 @@ export async function fetchSheetsData(): Promise<Tower[] | null> {
       
       const proxyUrl = proxy.url + encodeURIComponent(targetUrl);
       
-      console.log(`Attempt ${attempt + 1}: Using proxy ${proxy.name} to access Google Sheets`);
+      console.log(`Tentativa ${attempt + 1}: Usando proxy ${proxy.name} para acessar Google Sheets`);
       
       try {
         // Make the request with a timeout to prevent hanging
@@ -52,19 +52,19 @@ export async function fetchSheetsData(): Promise<Tower[] | null> {
             'Pragma': 'no-cache',
             'Expires': '0'
           }
-        }, 20000); // 20s timeout
+        }, 30000); // 30s timeout (aumentado para melhor performance)
         
         // If request was successful, update the current proxy index for next time
         if (response.ok) {
-          console.log(`Proxy ${proxy.name} worked successfully!`);
+          console.log(`Proxy ${proxy.name} funcionou com sucesso!`);
           updateCurrentProxyIndex(proxyIndex);
           
           // Parse response data
           const data = await response.json();
-          console.log("Received data from Google Sheets:", data);
+          console.log("Dados recebidos do Google Sheets:", data);
           
           if (!data.values || data.values.length < 2) {
-            console.error("No data or insufficient data returned from the sheet");
+            console.error("Dados insuficientes retornados da planilha");
             toast.error('Dados insuficientes na planilha');
             return null;
           }
@@ -73,7 +73,7 @@ export async function fetchSheetsData(): Promise<Tower[] | null> {
           const parsedTowers = parseTowersData(data.values);
           
           if (parsedTowers.length > 0) {
-            console.log("Successfully parsed towers data:", parsedTowers);
+            console.log("Dados das torres analisados com sucesso:", parsedTowers);
             toast.success('Dados carregados com sucesso do Google Sheets');
             
             // Set source to be explicitly from sheets
@@ -87,13 +87,13 @@ export async function fetchSheetsData(): Promise<Tower[] | null> {
             
             return parsedTowers;
           } else {
-            console.error("Failed to parse tower data");
+            console.error("Falha ao analisar dados das torres");
             toast.error('Nenhuma torre encontrada na planilha');
             return null;
           }
         } else {
           // Log the error status
-          console.error(`Proxy ${proxy.name} returned status ${response.status}`);
+          console.error(`Proxy ${proxy.name} retornou status ${response.status}`);
           lastError = new Error(`HTTP status ${response.status}`);
           
           // Try to get detailed error info
@@ -108,14 +108,14 @@ export async function fetchSheetsData(): Promise<Tower[] | null> {
           }
         }
       } catch (error: any) {
-        console.error(`Error with proxy ${proxy.name}:`, error);
+        console.error(`Erro com o proxy ${proxy.name}:`, error);
         lastError = error;
         // Continue to next proxy
       }
     }
     
     // If we get here, all proxies failed
-    console.error("All proxies failed to access Google Sheets API");
+    console.error("Todos os proxies falharam ao acessar a API Google Sheets");
     if (lastError) {
       toast.error(`Não foi possível acessar a API: ${lastError.message}`);
     } else {
@@ -125,7 +125,7 @@ export async function fetchSheetsData(): Promise<Tower[] | null> {
     return null;
     
   } catch (error: any) {
-    console.error("Error fetching from Google Sheets:", error);
+    console.error("Erro ao buscar dados do Google Sheets:", error);
     toast.error(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     return null;
   }
