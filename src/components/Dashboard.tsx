@@ -25,8 +25,11 @@ export const Dashboard = () => {
     queryKey: ['towers'],
     queryFn: fetchTowers,
     staleTime: Infinity, // Data will never go stale automatically
-    onError: (err) => {
-      toast.error(`Erro ao carregar dados: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+    retry: 2,
+    onSettled: (data, error) => {
+      if (error) {
+        toast.error(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      }
     }
   });
 
