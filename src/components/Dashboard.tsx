@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { ChatButton } from "./chat/ChatButton";
 
 export const Dashboard = () => {
   const [selectedTower, setSelectedTower] = useState<Tower | null>(null);
@@ -144,6 +145,9 @@ export const Dashboard = () => {
       </div>
 
       <Footer />
+      
+      {/* Add the ChatButton component */}
+      <ChatButton />
     </div>
   );
 };

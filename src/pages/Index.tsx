@@ -2,7 +2,11 @@
 import { Dashboard } from "@/components/Dashboard";
 
 const Index = () => {
-  return <Dashboard />;
+  return (
+    <div className="relative">
+      <Dashboard />
+    </div>
+  );
 };
 
 export default Index;
