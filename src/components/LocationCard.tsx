@@ -8,10 +8,13 @@ interface LocationCardProps {
 }
 
 export const LocationCard = ({ tower }: LocationCardProps) => {
-  // Function to construct Google Maps embed URL
+  // Função para construir a URL do Google Maps embed
   const getMapUrl = () => {
     const { lat, lng } = tower.coordinates;
-    return `https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${lat},${lng}&zoom=15`;
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+      return `https://www.google.com/maps/embed/v1/place?key=AIzaSyB0JhrzJjRkyiOZibah2Z028S6G3QRCVco&q=${encodeURIComponent(tower.location)}&zoom=12`;
+    }
+    return `https://www.google.com/maps/embed/v1/place?key=AIzaSyB0JhrzJjRkyiOZibah2Z028S6G3QRCVco&q=${lat},${lng}&zoom=15`;
   };
 
   return (
@@ -26,13 +29,27 @@ export const LocationCard = ({ tower }: LocationCardProps) => {
         </div>
         
         <div className="aspect-video w-full bg-slate-200 rounded overflow-hidden mb-4">
-          {/* In a real application, this would be a proper map component */}
-          {/* For demo purposes, we'll show the location image */}
-          <img 
-            src={tower.images.location} 
-            alt={`Localização da ${tower.name}`}
-            className="w-full h-full object-cover"
-          />
+          {/* Agora usando iframe do Google Maps */}
+          <iframe 
+            src={getMapUrl()}
+            className="w-full h-full" 
+            title={`Localização da ${tower.name}`}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            onError={(e) => {
+              console.error("Erro ao carregar o mapa:", e);
+              // Fallback para imagem
+              const target = e.target as HTMLIFrameElement;
+              if (target && target.parentNode) {
+                const img = document.createElement('img');
+                img.src = tower.images.location;
+                img.alt = `Localização da ${tower.name}`;
+                img.className = "w-full h-full object-cover";
+                target.parentNode.replaceChild(img, target);
+              }
+            }}
+          ></iframe>
         </div>
 
         <div className="aspect-video w-full bg-slate-200 rounded overflow-hidden">
@@ -40,6 +57,10 @@ export const LocationCard = ({ tower }: LocationCardProps) => {
             src={tower.images.tower} 
             alt={`${tower.name}`}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              console.warn(`Erro ao carregar imagem da torre para ${tower.name}`);
+              (e.target as HTMLImageElement).src = "/placeholder.svg";
+            }}
           />
         </div>
       </CardContent>
